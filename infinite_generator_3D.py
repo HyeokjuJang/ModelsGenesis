@@ -4,11 +4,7 @@
 """
 for subset in `seq 0 9`
 do
-python -W ignore infinite_generator_3D.py \
---fold $subset \
---scale 32 \
---data /mnt/dataset/shared/zongwei/LUNA16 \
---save generated_cubes
+python -W ignore infinite_generator_3D.py --fold 0 --scale 32 --data D:\mri\genesis_data --save generated_cubes
 done
 """
 
@@ -18,10 +14,6 @@ done
 import warnings
 warnings.filterwarnings('ignore')
 import os
-import keras
-print("Keras = {}".format(keras.__version__))
-import tensorflow as tf
-os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'  # or any {'0', '1', '2'}
 
 import sys
 import math
@@ -44,7 +36,7 @@ parser = OptionParser()
 parser.add_option("--fold", dest="fold", help="fold of subset", default=None, type="int")
 parser.add_option("--input_rows", dest="input_rows", help="input rows", default=64, type="int")
 parser.add_option("--input_cols", dest="input_cols", help="input cols", default=64, type="int")
-parser.add_option("--input_deps", dest="input_deps", help="input deps", default=32, type="int")
+parser.add_option("--input_deps", dest="input_deps", help="input deps", default=64, type="int")
 parser.add_option("--crop_rows", dest="crop_rows", help="crop rows", default=64, type="int")
 parser.add_option("--crop_cols", dest="crop_cols", help="crop cols", default=64, type="int")
 parser.add_option("--data", dest="data", help="the directory of LUNA16 dataset", default=None, type="string")
@@ -64,8 +56,8 @@ if not os.path.exists(options.save):
     os.makedirs(options.save)
 
 class setup_config():
-    hu_max = 1000.0
-    hu_min = -1000.0
+    hu_max = 255
+    hu_min = 0
     HU_thred = (-150.0 - hu_min) / (hu_max - hu_min)
     def __init__(self, 
                  input_rows=None, 
@@ -116,9 +108,9 @@ config = setup_config(input_rows=options.input_rows,
                       crop_rows=options.crop_rows,
                       crop_cols=options.crop_cols,
                       scale=options.scale,
-                      len_border=100,
-                      len_border_z=30,
-                      len_depth=3,
+                      len_border=0,
+                      len_border_z=0,
+                      len_depth=1,
                       lung_min=0.7,
                       lung_max=0.15,
                       DATA_DIR=options.data,
@@ -193,13 +185,11 @@ def get_self_learning_data(fold, config):
     slice_set = []
     for index_subset in fold:
         luna_subset_path = os.path.join(config.DATA_DIR, "subset"+str(index_subset))
-        file_list = glob(os.path.join(luna_subset_path, "*.mhd"))
+        file_list = glob(os.path.join(luna_subset_path, "*.npy"))
         
         for img_file in tqdm(file_list):
-            
-            itk_img = sitk.ReadImage(img_file) 
-            img_array = sitk.GetArrayFromImage(itk_img)
-            img_array = img_array.transpose(2, 1, 0)
+            img_array = np.load(img_file)
+            img_array = img_array.squeeze()
             
             x = infinite_generator_from_one_volume(config, img_array)
             if x is not None:
@@ -210,6 +200,7 @@ def get_self_learning_data(fold, config):
 
 print(">> Fold {}".format(fold))
 cube = get_self_learning_data([fold], config)
+print(cube)
 print("cube: {} | {:.2f} ~ {:.2f}".format(cube.shape, np.min(cube), np.max(cube)))
 np.save(os.path.join(options.save, 
                      "bat_"+str(config.scale)+

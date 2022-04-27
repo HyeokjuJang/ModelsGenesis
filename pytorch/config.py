@@ -7,10 +7,10 @@ class models_genesis_config:
     exp_name = model + "-" + suffix
     
     # data
-    data = "/mnt/dataset/shared/zongwei/LUNA16/Self_Learning_Cubes"
-    train_fold=[0,1,2,3,4]
-    valid_fold=[5,6]
-    test_fold=[7,8,9]
+    data = "C:\\Users\\Jang\\Documents\\dev\\ModelsGenesis\\generated_cubes"
+    train_fold=[9]
+    valid_fold=[9]
+    test_fold=[9]
     hu_min = -1000.0
     hu_max = 1000.0
     scale = 32
