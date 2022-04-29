@@ -157,47 +157,51 @@ def image_out_painting(x):
                 
 
 
-def generate_pair(img, batch_size, config, status="test"):
-    img_rows, img_cols, img_deps = img.shape[2], img.shape[3], img.shape[4]
+def generate_pair(x_train, batch_size, config, status="test"):
     while True:
-        index = [i for i in range(img.shape[0])]
-        random.shuffle(index)
-        y = img[index[:batch_size]]
-        x = copy.deepcopy(y)
-        for n in range(batch_size):
-            
-            # Autoencoder
-            x[n] = copy.deepcopy(y[n])
-            
-            # Flip
-            x[n], y[n] = data_augmentation(x[n], y[n], config.flip_rate)
+        # x_train file for loop
+        for x_i in range(len(x_train)):
+            s = np.load(x_train[x_i])
+            img = np.expand_dims(np.array(s), axis=1)
+            img_rows, img_cols, img_deps = img.shape[2], img.shape[3], img.shape[4]
+            index = [i for i in range(len(img))]
+            random.shuffle(index)
+            y = img[index[:batch_size]]
+            x = copy.deepcopy(y)
+            for n in range(batch_size):
+                
+                # Autoencoder
+                x[n] = copy.deepcopy(y[n])
+                
+                # Flip
+                x[n], y[n] = data_augmentation(x[n], y[n], config.flip_rate)
 
-            # Local Shuffle Pixel
-            x[n] = local_pixel_shuffling(x[n], prob=config.local_rate)
-            
-            # Apply non-Linear transformation with an assigned probability
-            x[n] = nonlinear_transformation(x[n], config.nonlinear_rate)
-            
-            # Inpainting & Outpainting
-            if random.random() < config.paint_rate:
-                if random.random() < config.inpaint_rate:
-                    # Inpainting
-                    x[n] = image_in_painting(x[n])
-                else:
-                    # Outpainting
-                    x[n] = image_out_painting(x[n])
+                # Local Shuffle Pixel
+                x[n] = local_pixel_shuffling(x[n], prob=config.local_rate)
+                
+                # Apply non-Linear transformation with an assigned probability
+                x[n] = nonlinear_transformation(x[n], config.nonlinear_rate)
+                
+                # Inpainting & Outpainting
+                if random.random() < config.paint_rate:
+                    if random.random() < config.inpaint_rate:
+                        # Inpainting
+                        x[n] = image_in_painting(x[n])
+                    else:
+                        # Outpainting
+                        x[n] = image_out_painting(x[n])
 
-        # Save sample images module
-        if config.save_samples is not None and status == "train" and random.random() < 0.01:
-            n_sample = random.choice( [i for i in range(config.batch_size)] )
-            sample_1 = np.concatenate((x[n_sample,0,:,:,2*img_deps//6], y[n_sample,0,:,:,2*img_deps//6]), axis=1)
-            sample_2 = np.concatenate((x[n_sample,0,:,:,3*img_deps//6], y[n_sample,0,:,:,3*img_deps//6]), axis=1)
-            sample_3 = np.concatenate((x[n_sample,0,:,:,4*img_deps//6], y[n_sample,0,:,:,4*img_deps//6]), axis=1)
-            sample_4 = np.concatenate((x[n_sample,0,:,:,5*img_deps//6], y[n_sample,0,:,:,5*img_deps//6]), axis=1)
-            final_sample = np.concatenate((sample_1, sample_2, sample_3, sample_4), axis=0)
-            final_sample = final_sample * 255.0
-            final_sample = final_sample.astype(np.uint8)
-            file_name = ''.join([random.choice(string.ascii_letters + string.digits) for n in range(10)])+'.'+config.save_samples
-            imageio.imwrite(os.path.join(config.sample_path, config.exp_name, file_name), final_sample)
+            # Save sample images module
+            if config.save_samples is not None and status == "train" and random.random() < 0.01:
+                n_sample = random.choice( [i for i in range(config.batch_size)] )
+                sample_1 = np.concatenate((x[n_sample,0,:,:,2*img_deps//6], y[n_sample,0,:,:,2*img_deps//6]), axis=1)
+                sample_2 = np.concatenate((x[n_sample,0,:,:,3*img_deps//6], y[n_sample,0,:,:,3*img_deps//6]), axis=1)
+                sample_3 = np.concatenate((x[n_sample,0,:,:,4*img_deps//6], y[n_sample,0,:,:,4*img_deps//6]), axis=1)
+                sample_4 = np.concatenate((x[n_sample,0,:,:,5*img_deps//6], y[n_sample,0,:,:,5*img_deps//6]), axis=1)
+                final_sample = np.concatenate((sample_1, sample_2, sample_3, sample_4), axis=0)
+                final_sample = final_sample * 255.0
+                final_sample = final_sample.astype(np.uint8)
+                file_name = ''.join([random.choice(string.ascii_letters + string.digits) for n in range(10)])+'.'+config.save_samples
+                imageio.imwrite(os.path.join(config.sample_path, config.exp_name, file_name), final_sample)
 
-        yield (x, y)
+            yield (x, y)

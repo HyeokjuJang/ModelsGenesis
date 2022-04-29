@@ -4,7 +4,7 @@
 """
 for subset in `seq 0 9`
 do
-python -W ignore infinite_generator_3D.py --fold 0 --scale 32 --data D:\mri\genesis_data --save generated_cubes
+python -W ignore infinite_generator_3D.py --fold 0 --scale 32 --data /data2/brain_mri/genesis_dataset --save generated_cubes
 done
 """
 
@@ -50,7 +50,7 @@ random.seed(seed)
 
 assert options.data is not None
 assert options.save is not None
-assert options.fold >= 0 and options.fold <= 9
+assert options.fold >= 0 and options.fold <= 100
 
 if not os.path.exists(options.save):
     os.makedirs(options.save)
@@ -184,7 +184,7 @@ def infinite_generator_from_one_volume(config, img_array):
 def get_self_learning_data(fold, config):
     slice_set = []
     for index_subset in fold:
-        luna_subset_path = os.path.join(config.DATA_DIR, "subset"+str(index_subset))
+        luna_subset_path = os.path.join(config.DATA_DIR, "genesis_dataset"+str(index_subset))
         file_list = glob(os.path.join(luna_subset_path, "*.npy"))
         
         for img_file in tqdm(file_list):
@@ -200,7 +200,6 @@ def get_self_learning_data(fold, config):
 
 print(">> Fold {}".format(fold))
 cube = get_self_learning_data([fold], config)
-print(cube)
 print("cube: {} | {:.2f} ~ {:.2f}".format(cube.shape, np.min(cube), np.max(cube)))
 np.save(os.path.join(options.save, 
                      "bat_"+str(config.scale)+

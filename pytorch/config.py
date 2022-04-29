@@ -7,27 +7,27 @@ class models_genesis_config:
     exp_name = model + "-" + suffix
     
     # data
-    data = "C:\\Users\\Jang\\Documents\\dev\\ModelsGenesis\\generated_cubes"
-    train_fold=[9]
-    valid_fold=[9]
-    test_fold=[9]
-    hu_min = -1000.0
-    hu_max = 1000.0
+    data = "/data2/brain_mri/genesis_generated_cubes"
+    train_fold=[i for i in range(99)]
+    valid_fold=[0]
+    test_fold=[]
+    hu_min = 0.0
+    hu_max = 255.0
     scale = 32
     input_rows = 64
     input_cols = 64 
-    input_deps = 32
+    input_deps = 64
     nb_class = 1
     
     # model pre-training
     verbose = 1
     weights = None
-    batch_size = 6
-    optimizer = "sgd"
+    batch_size = 32
+    optimizer = "adam"
     workers = 10
     max_queue_size = workers * 4
     save_samples = "png"
-    nb_epoch = 10000
+    nb_epoch = 5
     patience = 50
     lr = 1
 

@@ -37,13 +37,13 @@ class LUConv(nn.Module):
         return out
 
 
-def _make_nConv(in_channel, depth, act, double_chnnel=False):
+def _make_nConv(in_channel, depth, act, double_chnnel=True):
     if double_chnnel:
-        layer1 = LUConv(in_channel, 32 * (2 ** (depth+1)),act)
-        layer2 = LUConv(32 * (2 ** (depth+1)), 32 * (2 ** (depth+1)),act)
+        layer1 = LUConv(in_channel, 8 * (2 ** (depth)),act)
+        layer2 = LUConv(8 * (2 ** (depth)), 8 * (2 ** (depth+1)),act)
     else:
-        layer1 = LUConv(in_channel, 32*(2**depth),act)
-        layer2 = LUConv(32*(2**depth), 32*(2**depth)*2,act)
+        layer1 = LUConv(in_channel, 8*(2**depth),act)
+        layer2 = LUConv(8*(2**depth), 8*(2**depth)*2,act)
 
     return nn.Sequential(layer1,layer2)
 
@@ -112,14 +112,14 @@ class UNet3D(nn.Module):
         super(UNet3D, self).__init__()
 
         self.down_tr64 = DownTransition(1,0,act)
-        self.down_tr128 = DownTransition(64,1,act)
-        self.down_tr256 = DownTransition(128,2,act)
-        self.down_tr512 = DownTransition(256,3,act)
+        self.down_tr128 = DownTransition(16,1,act)
+        self.down_tr256 = DownTransition(32,2,act)
+        self.down_tr512 = DownTransition(64,3,act)
 
-        self.up_tr256 = UpTransition(512, 512,2,act)
-        self.up_tr128 = UpTransition(256,256, 1,act)
-        self.up_tr64 = UpTransition(128,128,0,act)
-        self.out_tr = OutputTransition(64, n_class)
+        self.up_tr256 = UpTransition(128, 128,2,act)
+        self.up_tr128 = UpTransition(64,64, 1,act)
+        self.up_tr64 = UpTransition(32,32,0,act)
+        self.out_tr = OutputTransition(16, n_class)
 
     def forward(self, x):
         self.out64, self.skip_out64 = self.down_tr64(x)
