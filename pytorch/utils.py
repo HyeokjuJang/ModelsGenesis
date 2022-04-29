@@ -205,3 +205,4 @@ def generate_pair(x_train, batch_size, config, status="test"):
                 imageio.imwrite(os.path.join(config.sample_path, config.exp_name, file_name), final_sample)
 
             yield (x, y)
+        raise StopIteration("End of dataset") 
