@@ -9,7 +9,7 @@ class models_genesis_config:
     # data
     data = "/data2/brain_mri/genesis_generated_cubes"
     train_fold=[i for i in range(99)]
-    valid_fold=[0]
+    valid_fold=[99]
     test_fold=[]
     hu_min = 0.0
     hu_max = 255.0
