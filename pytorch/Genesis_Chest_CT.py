@@ -95,12 +95,8 @@ sys.stdout.flush()
 for epoch in range(intial_epoch,conf.nb_epoch):
     scheduler.step(epoch)
     model.train()
-    iteration = 0
-    while True:
-        try:
-            image, gt = next(training_generator)
-        except:
-            break
+    for iteration in range(len(x_train)*98*32+64):
+        image, gt = next(training_generator)
         gt = np.repeat(gt,conf.nb_class,axis=1)
         image,gt = torch.from_numpy(image).float().to(device), torch.from_numpy(gt).float().to(device)
         pred=model(image)
@@ -113,16 +109,12 @@ for epoch in range(intial_epoch,conf.nb_epoch):
             print('Epoch [{}/{}], iteration [{}/{}], Loss: {:.6f}'
                 .format(epoch + 1, conf.nb_epoch, iteration + 1, len(x_train)*98*32+64 , np.average(train_losses)))
             sys.stdout.flush()
-        iteration += 1
 
     with torch.no_grad():
         model.eval()
         print("validating....")
-        while True:
-            try:
-                x, y = next(validation_generator)
-            except:
-                break
+        for i in range(len(x_valid)*98*32):
+            x, y = next(validation_generator)
             y = np.repeat(y,conf.nb_class,axis=1)
             image,gt = torch.from_numpy(x).float(), torch.from_numpy(y).float()
             image=image.to(device)
