@@ -24,7 +24,7 @@ class models_genesis_config:
     weights = None
     batch_size = 32
     optimizer = "adam"
-    workers = 10
+    workers = 8
     max_queue_size = workers * 4
     save_samples = "png"
     nb_epoch = 5

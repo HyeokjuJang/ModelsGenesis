@@ -166,11 +166,11 @@ def generate_pair(x_train, batch_size, config, status="test"):
             img_rows, img_cols, img_deps = img.shape[2], img.shape[3], img.shape[4]
             index = [i for i in range(len(img))]
             random.shuffle(index)
-            for i in range(len(s)):
-                y = img[index[i*batch_size:(i+1)*batch_size]]
+            for index_i in range(len(s)//batch_size):
+                y = img[index[index_i*batch_size:(index_i+1)*batch_size]]
                 x = copy.deepcopy(y)
 
-                for n in range(batch_size):
+                for n in range(x.shape[0]):
                     
                     # Autoencoder
                     x[n] = copy.deepcopy(y[n])
@@ -195,7 +195,7 @@ def generate_pair(x_train, batch_size, config, status="test"):
 
                 # Save sample images module
                 if config.save_samples is not None and status == "train" and random.random() < 0.01:
-                    n_sample = random.choice( [i for i in range(config.batch_size)] )
+                    n_sample = random.choice( [i for i in range(x.shape[0])] )
                     sample_1 = np.concatenate((x[n_sample,0,:,:,2*img_deps//6], y[n_sample,0,:,:,2*img_deps//6]), axis=1)
                     sample_2 = np.concatenate((x[n_sample,0,:,:,3*img_deps//6], y[n_sample,0,:,:,3*img_deps//6]), axis=1)
                     sample_3 = np.concatenate((x[n_sample,0,:,:,4*img_deps//6], y[n_sample,0,:,:,4*img_deps//6]), axis=1)
