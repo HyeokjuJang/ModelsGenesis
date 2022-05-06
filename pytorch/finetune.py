@@ -25,7 +25,7 @@ import numpy as np
 seed = 2022
 
 lr = 0.001
-batch_size = 4
+batch_size = 6
 n_epochs = 10
 gpu = 0
 mci = True
