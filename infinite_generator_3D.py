@@ -184,7 +184,7 @@ def infinite_generator_from_one_volume(config, img_array):
 def get_self_learning_data(fold, config):
     slice_set = []
     for index_subset in fold:
-        luna_subset_path = os.path.join(config.DATA_DIR, "genesis_dataset"+str(index_subset))
+        luna_subset_path = os.path.join(config.DATA_DIR, "genesis_adni_dataset"+str(index_subset))
         file_list = glob(os.path.join(luna_subset_path, "*.npy"))
         
         for img_file in tqdm(file_list):

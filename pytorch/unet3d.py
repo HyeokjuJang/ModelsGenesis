@@ -108,8 +108,10 @@ class OutputTransition(nn.Module):
 class UNet3D(nn.Module):
     # the number of convolutions in each layer corresponds
     # to what is in the actual prototxt, not the intent
-    def __init__(self, n_class=1, act='relu'):
+    def __init__(self, n_class=1, act='relu', finetune=False):
         super(UNet3D, self).__init__()
+
+        self.finetune = finetune
 
         self.down_tr64 = DownTransition(1,0,act)
         self.down_tr128 = DownTransition(16,1,act)
@@ -122,14 +124,24 @@ class UNet3D(nn.Module):
         self.out_tr = OutputTransition(16, n_class)
 
     def forward(self, x):
+        # encoder part
+        encoders_features = []
+        
         self.out64, self.skip_out64 = self.down_tr64(x)
+        encoders_features.insert(0, self.skip_out64)
         self.out128,self.skip_out128 = self.down_tr128(self.out64)
+        encoders_features.insert(0, self.skip_out128)
         self.out256,self.skip_out256 = self.down_tr256(self.out128)
+        encoders_features.insert(0, self.skip_out256)
         self.out512,self.skip_out512 = self.down_tr512(self.out256)
+        encoders_features.insert(0, self.skip_out512)
 
         self.out_up_256 = self.up_tr256(self.out512,self.skip_out256)
         self.out_up_128 = self.up_tr128(self.out_up_256, self.skip_out128)
         self.out_up_64 = self.up_tr64(self.out_up_128, self.skip_out64)
         self.out = self.out_tr(self.out_up_64)
 
-        return self.out
+        if self.finetune:
+            return encoders_features
+        else:
+            return self.out
