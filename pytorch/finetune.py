@@ -40,10 +40,11 @@ beta1 = 0.9
 
 # Create CNN Model
 class TargetNet(nn.Module):
-    def __init__(self, base_model, in_channel=[16, 32, 64, 128], out_channel=1):
+    def __init__(self, base_model, in_channel=[16, 32, 64, 128], out_channel=1, base_trainable=False):
         super(TargetNet, self).__init__()
         self.base_model = base_model
-        
+        self.base_trainable = base_trainable
+
         self.conv_layer1 = self._conv_layer_set(in_channel[0], 32, 3, 1)
         self.conv_layer2 = self._conv_layer_set(in_channel[1] * 2, 64, 3, 1)
         self.conv_layer3 = self._conv_layer_set(in_channel[2] * 2, 128, 3, 1)
@@ -88,7 +89,11 @@ class TargetNet(nn.Module):
 
     def forward(self, x):
         batch_size = x[0].shape[0]
-        x = self.base_model(x)
+        if self.base_trainable:
+            x = self.base_model(x)
+        else:
+            with torch.no_grad():
+                x = self.base_model(x)
         # Set 1
         out0 = self.conv_layer1(x[3])
         out1 = self.conv_layer2(torch.cat([out0, x[2]], dim=1))
@@ -203,7 +208,7 @@ def train_worker(
         #     print(param.sum())
         #     break
 
-        fullModel = TargetNet(base_model, out_channel=n_classes)
+        fullModel = TargetNet(base_model, out_channel=n_classes, base_trainable=base_trainable)
         fullModel.cuda(gpu)
         
         torch.cuda.set_device(gpu)
@@ -384,7 +389,7 @@ def train_worker(
         )
 
     # redefine model for load from state_dict
-    fullModel = TargetNet(base_model, out_channel=n_classes)
+    fullModel = TargetNet(base_model, out_channel=n_classes, base_trainable=base_trainable)
     fullModel.cuda(gpu)
 
     # load best model
