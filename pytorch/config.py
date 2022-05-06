@@ -31,6 +31,15 @@ class models_genesis_config:
     patience = 50
     lr = 1
 
+    # is_ppo
+    is_ppo = True
+    ppo_epoch_per_update = 2
+    ppo_update_timestep = 50  # we already have a batch, so we cannot use the rollout
+    eps_clip = 0.2
+    lr_actor = 1e-3
+    lr_critic = 1e-3
+    e_greedy = 0.0
+
     # image deformation
     nonlinear_rate = 0.9
     paint_rate = 0.9

@@ -28,7 +28,7 @@ lr = 0.001
 batch_size = 6
 n_epochs = 10
 gpu = 0
-mci = True
+mci = False
 n_class = 2
 workers = 4 * torch.cuda.device_count()
 

@@ -46,8 +46,14 @@ for i,fold in enumerate(tqdm(conf.valid_fold)):
 print("x_train: {} ".format(len(x_train)))
 print("x_valid: {} ".format(len(x_valid)))
 
-training_generator = generate_pair(x_train,conf.batch_size, conf)
-validation_generator = generate_pair(x_valid,conf.batch_size, conf)
+netM = None
+if conf.is_ppo:
+    netM = PPO(conf.lr_actor, conf.lr_critic, conf.eps_clip, conf.ppo_epoch_per_update, 0)
+    training_generator = rl_generate_pair(x_train,conf.batch_size, conf, netM)
+    validation_generator = rl_generate_pair(x_valid,conf.batch_size, conf, netM)
+else:
+    training_generator = generate_pair(x_train,conf.batch_size, conf)
+    validation_generator = generate_pair(x_valid,conf.batch_size, conf)
 
 
 device=torch.device('cuda' if torch.cuda.is_available() else 'cpu')
@@ -91,6 +97,7 @@ if conf.weights != None:
     print("Loading weights from ",conf.weights)
 sys.stdout.flush()
 
+
 # train the model
 for epoch in range(intial_epoch,conf.nb_epoch):
     scheduler.step(epoch)
@@ -104,6 +111,10 @@ for epoch in range(intial_epoch,conf.nb_epoch):
         optimizer.zero_grad()
         loss.backward()
         optimizer.step()
+
+        if iteration % conf.ppo_update_timestep == 0:
+            netM.update()
+            
         train_losses.append(round(loss.item(), 2))
         if (iteration + 1) % 5 ==0:
             print('Epoch [{}/{}], iteration [{}/{}], Loss: {:.6f}'
@@ -149,3 +160,4 @@ for epoch in range(intial_epoch,conf.nb_epoch):
         print("Early Stopping")
         break
     sys.stdout.flush()
+
