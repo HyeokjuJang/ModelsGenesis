@@ -117,11 +117,11 @@ class UNet3D(nn.Module):
         self.down_tr128 = DownTransition(16,1,act)
         self.down_tr256 = DownTransition(32,2,act)
         self.down_tr512 = DownTransition(64,3,act)
-
-        self.up_tr256 = UpTransition(128, 128,2,act)
-        self.up_tr128 = UpTransition(64,64, 1,act)
-        self.up_tr64 = UpTransition(32,32,0,act)
-        self.out_tr = OutputTransition(16, n_class)
+        if not self.finetune:
+            self.up_tr256 = UpTransition(128, 128,2,act)
+            self.up_tr128 = UpTransition(64,64, 1,act)
+            self.up_tr64 = UpTransition(32,32,0,act)
+            self.out_tr = OutputTransition(16, n_class)
 
     def forward(self, x):
         # encoder part
@@ -136,12 +136,13 @@ class UNet3D(nn.Module):
         self.out512,self.skip_out512 = self.down_tr512(self.out256)
         encoders_features.insert(0, self.skip_out512)
 
+
+        if self.finetune:
+            return encoders_features
+
         self.out_up_256 = self.up_tr256(self.out512,self.skip_out256)
         self.out_up_128 = self.up_tr128(self.out_up_256, self.skip_out128)
         self.out_up_64 = self.up_tr64(self.out_up_128, self.skip_out64)
         self.out = self.out_tr(self.out_up_64)
 
-        if self.finetune:
-            return encoders_features
-        else:
-            return self.out
+        return self.out

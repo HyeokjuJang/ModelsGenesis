@@ -25,7 +25,7 @@ import numpy as np
 seed = 2022
 
 lr = 0.001
-batch_size = 16
+batch_size = 4
 n_epochs = 10
 gpu = 0
 mci = True
@@ -88,6 +88,7 @@ class TargetNet(nn.Module):
 
     def forward(self, x):
         batch_size = x[0].shape[0]
+        x = self.base_model(x)
         # Set 1
         out0 = self.conv_layer1(x[3])
         out1 = self.conv_layer2(torch.cat([out0, x[2]], dim=1))
@@ -185,7 +186,6 @@ def train_worker(
         print("Fold:", fold_id)
 
         base_model = unet3d.UNet3D(finetune=True)
-
         #Load pre-trained weights
         weight_dir = pretrain_path
         checkpoint = torch.load(weight_dir)
@@ -193,12 +193,18 @@ def train_worker(
         unParalled_state_dict = {}
         for key in state_dict.keys():
             unParalled_state_dict[key.replace("module.", "")] = state_dict[key]
-        base_model.load_state_dict(unParalled_state_dict)
+        
+        # check loaded or not
+        # for param in base_model.down_tr64.parameters():
+        #     print(param.sum())
+        #     break
+        base_model.load_state_dict(unParalled_state_dict, strict=False)
+        # for param in base_model.down_tr64.parameters():
+        #     print(param.sum())
+        #     break
+
         fullModel = TargetNet(base_model, out_channel=n_classes)
         fullModel.cuda(gpu)
-        target_model = nn.DataParallel(target_model, device_ids = [i for i in range(torch.cuda.device_count())])
-        criterion = nn.CrossEntropyLoss()
-        optimizer = torch.optim.SGD(target_model.parameters(), lr, momentum=0.9, weight_decay=0.0, nesterov=False)
         
         torch.cuda.set_device(gpu)
 
@@ -601,8 +607,8 @@ def main():
         False, # base_trainable
         'pretrained_weights/Genesis_Chest_CT.pt', # pretrain_path
         None, # load_path
-        os.path.join("data2", 'adni', "adni_144_148_176"), # dataset_path
-        False, # is_wandb
+        os.path.join("/data2", 'adni', "adni_144_148_176"), # dataset_path
+        True, # is_wandb
         train_id,# exp_id
         -1, # base_trainable_after_n_epoch -1 is not trainable if > 0, make trainable after num, even base_trainable is false
         mci, # MCI
