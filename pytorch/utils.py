@@ -164,8 +164,7 @@ def rl_data_augmentation(x, y, action, prob=0.5):
     # augmentation by flipping
     cnt = 3
     while action[0] < prob and cnt > 0:
-        choice = max(action[1:4])
-        degree = action.index(choice) - 1
+        degree = np.argmax(action[1:4])
         x = np.flip(x, axis=degree)
         y = np.flip(y, axis=degree)
         cnt = cnt - 1
@@ -262,7 +261,7 @@ def generate_pair(x_train, batch_size, config, status="test"):
                     # Flip
                     x[n], y[n] = data_augmentation(x[n], y[n], config.flip_rate)
 
-                    # Local Shuffle Pixel
+                    # # Local Shuffle Pixel
                     x[n] = local_pixel_shuffling(x[n], prob=config.local_rate)
                     
                     # Apply non-Linear transformation with an assigned probability
@@ -310,25 +309,25 @@ def rl_generate_pair(x_train, batch_size, config, netM, status="test"):
                     # Autoencoder
                     x[n] = copy.deepcopy(y[n])
 
-                    action = netM.select_action(x[n].expand_dims(0))
+                    action = netM.select_action(torch.tensor(np.expand_dims(x[n], 0)).float().cuda(0)).squeeze()
                     
                     # Flip
-                    x[n], y[n] = rl_data_augmentation(x[n], y[n], action[0:4], config.flip_rate)
+                    x[n], y[n] = rl_data_augmentation(x[n], y[n], action[0:4].detach().cpu().numpy(), config.flip_rate)
 
                     # no Local Shuffle Pixel on rl
                     # x[n] = local_pixel_shuffling(x[n], prob=config.local_rate)
                     
                     # Apply non-Linear transformation with an assigned probability
-                    x[n] = rl_nonlinear_transformation(x[n], action[4:10], config.nonlinear_rate)
+                    x[n] = rl_nonlinear_transformation(x[n], action[4:10].detach().cpu().numpy(), config.nonlinear_rate)
                     
                     # Inpainting & Outpainting
                     if random.random() < config.paint_rate:
                         if random.random() < config.inpaint_rate:
                             # Inpainting
-                            x[n] = rl_image_in_painting(x[n], action[10:40])
+                            x[n] = rl_image_in_painting(x[n], action[10:40].detach().cpu().numpy())
                         else:
                             # Outpainting
-                            x[n] = rl_image_out_painting(x[n], action[40:70])
+                            x[n] = rl_image_out_painting(x[n], action[40:70].detach().cpu().numpy())
 
                 # Save sample images module
                 if config.save_samples is not None and status == "train" and random.random() < 0.01:
@@ -369,7 +368,7 @@ class ActorCritic(nn.Module):
         # critic
         self.critic = PPO_Base_Model(nc=1, out_channels=1)
 
-        self.action_var = torch.full((70), 0.2 * 0.2).to(self.gpu)
+        self.action_var = torch.full((1, 70), 0.2 * 0.2).to(self.gpu)
 
     def forward(self):
         raise NotImplementedError
@@ -386,9 +385,10 @@ class ActorCritic(nn.Module):
         action_var = self.action_var.expand_as(action_mean)
         cov_mat = torch.diag_embed(action_var).to(self.gpu)
         dist = MultivariateNormal(action_mean, cov_mat)
-        action_logprobs = torch.log(action + 1e-5)
 
+        # action_logprobs = torch.log(action + 1e-5)
         action_logprobs = dist.log_prob(action)
+        
         dist_entropy = dist.entropy().mean()
 
         # nc = 2
@@ -401,7 +401,7 @@ class ActorCritic(nn.Module):
         return action_logprobs, state_values, dist_entropy
 
 class PPO_Base_Model(nn.Module):
-    def __init__(self, nc=1, ndf=4, out_channels=1):
+    def __init__(self, nc=1, ndf=8, out_channels=1):
         super(PPO_Base_Model, self).__init__()
         self.main = nn.Sequential(
             # input is (nc) x 128 x 128 x 128
@@ -419,17 +419,13 @@ class PPO_Base_Model(nn.Module):
             nn.Conv3d(ndf * 4, ndf * 8, 4, 2, 1, bias=False),
             nn.BatchNorm3d(ndf * 8),
             nn.LeakyReLU(0.2, inplace=True),
-            # state size. (ndf*8) x 8 x 8 x 8
-            nn.Conv3d(ndf * 8, ndf * 16, 4, 2, 1, bias=False),
-            nn.BatchNorm3d(ndf * 16),
-            nn.LeakyReLU(0.2, inplace=True),
-            nn.Conv3d(ndf * 16, 1, 3, 1, 0, bias=False), 
+            nn.Conv3d(ndf * 8, ndf * 4, 3, 1, 0, bias=False), 
             # nn.Conv3d(ndf * 16, 1, 4, 1, 0, bias=False), # for 121x121x145
             # nn.Sigmoid(), # for 121x121x145
         )
         # for 121x121x145
         self.fc_layer = nn.Sequential(
-            nn.Linear(12, out_channels),
+            nn.Linear(256, out_channels),
             nn.Sigmoid(),
         )
 
@@ -499,12 +495,14 @@ class PPO:
         # old_actionss = torch.cat(self.buffer.actions, dim=0).detach().cuda(self.gpu)
         # old_logprobss = torch.cat(self.buffer.logprobs, dim=0).detach().cuda(self.gpu)
         # Optimize policy for K epochs
+        
+        rewardss = torch.cat(self.buffer.rewards, dim=0).cuda(self.gpu)
         for _ in range(self.K_epochs):
             for i in range(len(self.buffer.states)):
                 old_states = self.buffer.states[i].cuda(self.gpu)
                 old_actions = self.buffer.actions[i].cuda(self.gpu)
                 old_logprobs = self.buffer.logprobs[i].cuda(self.gpu)
-                rewards = self.buffer.rewards[i].cuda(self.gpu)
+                rewards = rewardss[i].cuda(self.gpu)
                 # Evaluating old actions and values
                 logprobs, state_values, dist_entropy = self.policy.evaluate(
                     old_states, old_actions
@@ -514,7 +512,7 @@ class PPO:
                 state_values = torch.squeeze(state_values)
                 # Finding the ratio (pi_theta / pi_theta__old)
                 ratios = torch.exp(logprobs - old_logprobs.detach()).mean(
-                    dim=[1, 2, 3, 4]
+                    dim=[1]
                 )
 
                 # Finding Surrogate Loss

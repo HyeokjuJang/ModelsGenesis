@@ -7,13 +7,13 @@ class models_genesis_config:
     exp_name = model + "-" + suffix
     
     # data
-    data = "/data2/brain_mri/genesis_adni_generated_cubes"
-    train_fold=[i for i in range(19)]
-    valid_fold=[19]
+    data = '/data2/brain_mri/genesis_generated_cubes'#"/data2/brain_mri/genesis_adni_generated_cubes"
+    train_fold=[i for i in range(99)]
+    valid_fold=[99]
     test_fold=[]
     hu_min = 0.0
     hu_max = 255.0
-    scale = 16
+    scale = 32
     input_rows = 64
     input_cols = 64 
     input_deps = 64
@@ -22,12 +22,12 @@ class models_genesis_config:
     # model pre-training
     verbose = 1
     weights = None
-    batch_size = 32
+    batch_size = 16
     optimizer = "adam"
     workers = 8
     max_queue_size = workers * 4
     save_samples = "png"
-    nb_epoch = 10
+    nb_epoch = 5
     patience = 50
     lr = 1
 
@@ -39,6 +39,7 @@ class models_genesis_config:
     lr_actor = 1e-3
     lr_critic = 1e-3
     e_greedy = 0.0
+    alpha = 0.01
 
     # image deformation
     nonlinear_rate = 0.9

@@ -97,6 +97,8 @@ if conf.weights != None:
     print("Loading weights from ",conf.weights)
 sys.stdout.flush()
 
+if conf.is_ppo:
+    criterionM = nn.L1Loss(reduction="none").cuda(0)
 
 # train the model
 for epoch in range(intial_epoch,conf.nb_epoch):
@@ -108,13 +110,18 @@ for epoch in range(intial_epoch,conf.nb_epoch):
         image,gt = torch.from_numpy(image).float().to(device), torch.from_numpy(gt).float().to(device)
         pred=model(image)
         loss = criterion(pred,gt)
+        if conf.is_ppo:
+            errM = criterionM(pred, gt).mean(
+                dim=[1, 2, 3, 4]
+            )
+            netM.buffer.rewards.append(-torch.abs(errM.detach() - conf.alpha))
         optimizer.zero_grad()
         loss.backward()
         optimizer.step()
 
-        if iteration % conf.ppo_update_timestep == 0:
+        if iteration % conf.ppo_update_timestep == 0 and conf.is_ppo:
             netM.update()
-            
+
         train_losses.append(round(loss.item(), 2))
         if (iteration + 1) % 5 ==0:
             print('Epoch [{}/{}], iteration [{}/{}], Loss: {:.6f}'
@@ -124,15 +131,16 @@ for epoch in range(intial_epoch,conf.nb_epoch):
     with torch.no_grad():
         model.eval()
         print("validating....")
-        for i in range(len(x_valid)*98*32):
-            x, y = next(validation_generator)
-            y = np.repeat(y,conf.nb_class,axis=1)
-            image,gt = torch.from_numpy(x).float(), torch.from_numpy(y).float()
-            image=image.to(device)
-            gt=gt.to(device)
-            pred=model(image)
-            loss = criterion(pred,gt)
-            valid_losses.append(loss.item())
+        for i in range(len(x_valid)*83):
+            with torch.no_grad():
+                x, y = next(validation_generator)
+                y = np.repeat(y,conf.nb_class,axis=1)
+                image,gt = torch.from_numpy(x).float().to(device), torch.from_numpy(y).float().to(device)
+                pred=model(image)
+                loss = criterion(pred,gt)
+                valid_losses.append(loss.item())
+        if conf.is_ppo:
+            netM.buffer.clear()
     
     #logging
     train_loss=np.average(train_losses)

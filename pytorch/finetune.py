@@ -28,7 +28,7 @@ lr = 0.001
 batch_size = 6
 n_epochs = 10
 gpu = 0
-mci = False
+mci = True
 n_class = 2
 workers = 4 * torch.cuda.device_count()
 
@@ -600,28 +600,46 @@ def main():
         random.seed(seed)
         np.random.seed(seed)
         torch.manual_seed(seed)
-    train_id = "genesis_train"
+    train_id = "genesis_train" 
+
     
-    train_worker(
-         0, # gpu
-        1, # n_gpus
-        batch_size, # batch_size
-        4, # num_worker
-        10, # num_epochs
-        'genesis', # block_method
-        False, # base_trainable
-        'pretrained_weights/Genesis_Chest_CT.pt', # pretrain_path
-        None, # load_path
-        os.path.join("/data2", 'adni', "adni_144_148_176"), # dataset_path
-        True, # is_wandb
-        train_id,# exp_id
-        -1, # base_trainable_after_n_epoch -1 is not trainable if > 0, make trainable after num, even base_trainable is false
-        mci, # MCI
-        False, # y_aware_test
-        False, # densenet,
-        n_class, # number of classes
-        True, # legacy top model
-    )
+    mcis = [False, True]
+    n_classes = [2, 3]
+    trial = 3
+    vanillas = [True]
+
+    for vanilla in vanillas:
+        for n_class in n_classes:
+            for mci in mcis:
+                if mci == False and n_class == 3:
+                    continue
+                for i in range(trial):
+                    if vanilla:
+                        pretrain_path = 'pretrained_weights/no_pixel_Genesis_Chest_CT.pt'
+                        train_id = "all_pixel_genesis-mci_{}-n_class_{}-trial_{}".format(mci, n_class, i)
+                    else:
+                        pretrain_path = 'pretrained_weights/guided_Genesis_Chest_CT.pt'
+                        train_id = "all_ppo_genesis-mci_{}-n_class_{}-trial_{}".format(mci, n_class, i)
+                    train_worker(
+                        0, # gpu
+                        1, # n_gpus
+                        batch_size, # batch_size
+                        4, # num_worker
+                        10, # num_epochs
+                        'genesis', # block_method
+                        False, # base_trainable
+                        pretrain_path, # pretrain_path
+                        None, # load_path
+                        os.path.join("/data2", 'adni', "adni_144_148_176"), # dataset_path
+                        True, # is_wandb
+                        train_id,# exp_id
+                        -1, # base_trainable_after_n_epoch -1 is not trainable if > 0, make trainable after num, even base_trainable is false
+                        mci, # MCI
+                        False, # y_aware_test
+                        False, # densenet,
+                        n_class, # number of classes
+                        True, # legacy top model
+                    )
 
 
 if __name__ == "__main__":
